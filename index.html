@@ -1243,13 +1243,6 @@ function editCellE(td, jahr, monat, field) {
 
   makeEditable(td, row[field], async (val) => {
     row[field] = val;
-    // Auto-Berechnung Vergütung
-    if (field === 'zaehler_anfang' || field === 'zaehler_ende') {
-      if (row.zaehler_anfang != null && row.zaehler_ende != null) {
-        const kwh = Math.max(0, row.zaehler_ende - row.zaehler_anfang);
-        row.verguetung = Math.round(kwh * 0.081 * 100) / 100;
-      }
-    }
     await upsertEinsp(row);
     render();
   });
