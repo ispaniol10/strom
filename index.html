@@ -1236,23 +1236,21 @@ function renderContent() {
 // ══════════════════════════════════════════════════════
 //  EDIT HANDLERS
 // ══════════════════════════════════════════════════════
-function editCell(td, jahr, monat, field, table) {
-  if (!verbrauch[jahr]) verbrauch[jahr] = {};
-  if (!verbrauch[jahr][monat]) verbrauch[jahr][monat] = emptyRow(jahr, monat);
-  const row = verbrauch[jahr][monat];
+function editCellE(td, jahr, monat, field) {
+  if (!einsp[jahr]) einsp[jahr] = {};
+  if (!einsp[jahr][monat]) einsp[jahr][monat] = { jahr, monat, zaehler_anfang: null, zaehler_ende: null, verguetung: null };
+  const row = einsp[jahr][monat];
 
   makeEditable(td, row[field], async (val) => {
     row[field] = val;
-    // Auto-calc verbrauch
-    if (field === 'strom_anfang' || field === 'strom_ende') {
-      if (row.strom_anfang != null && row.strom_ende != null)
-        row.strom_verbrauch = row.strom_ende - row.strom_anfang;
+    // Auto-Berechnung Vergütung
+    if (field === 'zaehler_anfang' || field === 'zaehler_ende') {
+      if (row.zaehler_anfang != null && row.zaehler_ende != null) {
+        const kwh = Math.max(0, row.zaehler_ende - row.zaehler_anfang);
+        row.verguetung = Math.round(kwh * 0.081 * 100) / 100;
+      }
     }
-    if (field === 'gas_anfang' || field === 'gas_ende') {
-      if (row.gas_anfang != null && row.gas_ende != null)
-        row.gas_verbrauch = row.gas_ende - row.gas_anfang;
-    }
-    await upsertVerbrauch(row);
+    await upsertEinsp(row);
     render();
   });
 }
