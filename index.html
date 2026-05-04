@@ -1276,6 +1276,11 @@ async function init() {
   initFromSeed();
   activeYear = Math.max(...getYears());
 
+  // ── Supabase-Zugangsdaten direkt hier eintragen ──
+  localStorage.setItem('sb_url', 'https://sxnuqslcxlghvlfwwbvs.supabase.co');
+  localStorage.setItem('sb_key', 'sb_publishable_mAwXUUnUzjrPtPC2lP7zig_dM5YGMb6');
+  // ─────────────────────────────────────────────────
+
   const connected = initSupabase();
   if (connected) {
     const ok = await loadFromSupabase();
@@ -1289,10 +1294,6 @@ async function init() {
   render();
 }
 
-// Close modal on overlay click
-document.getElementById('settingsOverlay').addEventListener('click', function(e) {
-  if (e.target === this) closeSettings();
-});
 
 init();
 </script>
