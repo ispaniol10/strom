@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Energieverwaltung – Strom & Gas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root {
+  --bg: #0a0e14;
+  --surface: #111820;
+  --surface2: #1a2433;
+  --surface3: #1f2d3d;
+  --border: #253347;
+  --border-light: #2e3d52;
+  --text: #d4dfe8;
+  --text-muted: #5a7a96;
+  --text-dim: #3a5470;
+  --accent: #4da6ff;
+  --accent2: #f5a623;
+  --accent3: #50e3c2;
+  --green: #27ae60;
+  --green-bg: rgba(39,174,96,0.15);
+  --green-text: #6fcf97;
+  --red: #e74c3c;
+  --red-bg: rgba(231,76,60,0.15);
+  --red-text: #f98b82;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Syne', sans-serif;
+  --radius: 6px;
+  --glow: 0 0 20px rgba(77,166,255,0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ═══════════════════ HEADER ═══════════════════ */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 1px 0 var(--border);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+
+.logo-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent3));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.logo-text { color: var(--text); }
+.logo-text span { color: var(--accent); }
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.connection-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.conn-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.conn-dot.online { background: #27ae60; box-shadow: 0 0 6px #27ae6080; }
+.conn-dot.error { background: #e74c3c; }
+
+/* ═══════════════════ BUTTONS ═══════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--border-light); }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: #6ab8ff; box-shadow: 0 0 12px rgba(77,166,255,0.3); }
+
+.btn-danger {
+  background: transparent;
+  border-color: var(--red);
+  color: var(--red-text);
+}
+.btn-danger:hover { background: var(--red-bg); }
+
+/* ═══════════════════ YEAR TABS ═══════════════════ */
+.tabs-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs-bar::-webkit-scrollbar { display: none; }
+
+.tab {
+  padding: 0.85rem 1.5rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: all 0.15s;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  position: relative;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-add {
+  margin-left: auto;
+  margin-bottom: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════ MAIN ═══════════════════ */
+main {
+  padding: 2rem;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+/* ═══════════════════ SUMMARY CARDS ═══════════════════ */
+.summary-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.card.strom::before { background: linear-gradient(90deg, var(--accent), transparent); }
+.card.gas::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+.card.solar::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+.card.delta-good::before { background: linear-gradient(90deg, var(--green), transparent); }
+.card.delta-bad::before { background: linear-gradient(90deg, var(--red), transparent); }
+
+.card-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.6rem;
+}
+
+.card-value {
+  font-family: var(--mono);
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.card-unit {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-left: 0.2rem;
+}
+
+.card-delta {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.card-delta.pos { color: var(--red-text); }
+.card-delta.neg { color: var(--green-text); }
+.card-delta.neutral { color: var(--text-muted); }
+
+/* ═══════════════════ SECTION ═══════════════════ */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.section-head {
+  padding: 1rem 1.5rem;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.section-title .icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem;
+}
+
+.strom-icon { background: rgba(77,166,255,0.15); }
+.gas-icon { background: rgba(245,166,35,0.15); }
+.solar-icon { background: rgba(80,227,194,0.15); }
+
+.section-meta {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ═══════════════════ TABLE ═══════════════════ */
+.scroll-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+thead th {
+  padding: 0.6rem 1rem;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+thead th:first-child {
+  text-align: left;
+  width: 110px;
+}
+
+tbody td {
+  padding: 0.55rem 1rem;
+  text-align: right;
+  border-bottom: 1px solid rgba(37,51,71,0.6);
+  transition: background 0.1s;
+}
+
+tbody td:first-child {
+  text-align: left;
+  color: var(--text);
+  font-weight: 500;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+
+tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* Editable */
+td.edit {
+  cursor: pointer;
+  position: relative;
+}
+td.edit:hover { background: rgba(77,166,255,0.06) !important; }
+
+td.edit .val { display: block; }
+td.edit input {
+  width: 100%;
+  background: var(--surface3);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 0.2rem 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  text-align: right;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(77,166,255,0.2);
+}
+
+/* Verbrauch color states */
+td.v-lower { background: var(--green-bg) !important; color: var(--green-text); }
+td.v-higher { background: var(--red-bg) !important; color: var(--red-text); }
+td.v-same { }
+td.v-none { color: var(--text-dim); }
+
+/* Total row */
+tr.total-row td {
+  border-top: 1px solid var(--border-light);
+  border-bottom: none !important;
+  font-weight: 500;
+  color: var(--accent2);
+  background: var(--surface2) !important;
+  font-size: 0.82rem;
+}
+tr.total-row td:first-child { color: var(--text-muted); }
+
+/* Null display */
+.null-val { color: var(--text-dim); }
+
+/* ═══════════════════ MODAL ═══════════════════ */
+.overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.overlay.open { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 2rem;
+  width: 90%;
+  max-width: 680px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+}
+
+.modal h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-group { margin-bottom: 1.1rem; }
+
+.form-group label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.form-group input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.6rem 0.9rem;
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.form-group input:focus { border-color: var(--accent); }
+
+.code-block {
+  background: #060a0f;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: #7dd3fc;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 0.5rem 0 1.25rem;
+  line-height: 1.7;
+}
+
+.modal-info {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+  line-height: 1.6;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.75rem;
+}
+
+/* ═══════════════════ TOAST ═══════════════════ */
+#toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  background: var(--surface2);
+  border: 1px solid var(--border-light);
+  z-index: 999;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all 0.25s;
+  pointer-events: none;
+  max-width: 340px;
+}
+#toast.show { opacity: 1; transform: translateY(0); }
+#toast.ok { border-color: #27ae60; color: var(--green-text); }
+#toast.err { border-color: #e74c3c; color: var(--red-text); }
+
+/* ═══════════════════ EMPTY STATE ═══════════════════ */
+.empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+/* Year badge */
+.year-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: var(--text-dim);
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.04em;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div class="logo-text">Energie<span>Dashboard</span></div>
+  </div>
+  <div class="header-right">
+    <div class="connection-badge">
+      <div class="conn-dot" id="connDot"></div>
+      <span id="connText">Nicht verbunden</span>
+    </div>
+    <button class="btn btn-ghost" onclick="syncAll()">↻ Sync</button>
+    <button class="btn btn-ghost" onclick="openSettings()">⚙ Einstellungen</button>
+  </div>
+</header>
+
+<div class="tabs-bar" id="tabsBar">
+  <button class="btn btn-ghost tab-add" onclick="addYear()">＋ Jahr</button>
+</div>
+
+<main>
+  <div class="summary-row" id="summaryRow"></div>
+  <div id="contentArea"></div>
+</main>
+
+<!-- ═══ SETTINGS MODAL ═══ -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <h2>⚙ Supabase Verbindung</h2>
+
+    <div class="form-group">
+      <label>Supabase Project URL</label>
+      <input type="text" id="sbUrl" placeholder="https://xxxxxxxxxxxx.supabase.co">
+    </div>
+    <div class="form-group">
+      <label>Anon / Public Key</label>
+      <input type="text" id="sbKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+    </div>
+
+    <p class="modal-info">Führe folgende SQL-Befehle einmalig in deinem Supabase SQL-Editor aus:</p>
+    <div class="code-block">CREATE TABLE IF NOT EXISTS verbrauch_monat (
+  id BIGSERIAL PRIMARY KEY,
+  jahr        INTEGER NOT NULL,
+  monat       INTEGER NOT NULL CHECK (monat BETWEEN 1 AND 12),
+  strom_anfang     NUMERIC,
+  strom_ende       NUMERIC,
+  strom_verbrauch  NUMERIC,
+  strom_durchschnitt NUMERIC,
+  strom_eingespeist  NUMERIC,
+  gas_anfang       NUMERIC,
+  gas_ende         NUMERIC,
+  gas_verbrauch    NUMERIC,
+  gas_durchschnitt NUMERIC,
+  UNIQUE(jahr, monat)
+);
+
+CREATE TABLE IF NOT EXISTS einspeisung_solar (
+  id BIGSERIAL PRIMARY KEY,
+  jahr           INTEGER NOT NULL,
+  monat          INTEGER NOT NULL CHECK (monat BETWEEN 1 AND 12),
+  zaehler_anfang NUMERIC,
+  zaehler_ende   NUMERIC,
+  verguetung     NUMERIC,
+  UNIQUE(jahr, monat)
+);</div>
+
+    <p class="modal-info">Optional: Aktiviere Row Level Security und setze Policies für öffentlichen Lesezugriff,<br>
+    oder nutze den Service-Key für vollen Schreibzugriff (nur lokal verwenden!).</p>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeSettings()">Abbrechen</button>
+      <button class="btn btn-danger" onclick="clearSettings()">Trennen</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Verbinden & Sync</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════════════
+const MONATE = ['Januar','Februar','März','April','Mai','Juni',
+                'Juli','August','September','Oktober','November','Dezember'];
+
+// ══════════════════════════════════════════════════════
+//  INITIAL DATA
+// ══════════════════════════════════════════════════════
+function emptyRow(jahr, monat) {
+  return {
+    jahr, monat,
+    strom_anfang: null, strom_ende: null, strom_verbrauch: null,
+    strom_durchschnitt: null, strom_eingespeist: null,
+    gas_anfang: null, gas_ende: null, gas_verbrauch: null, gas_durchschnitt: null
+  };
+}
+
+function buildYear(jahr, overrides) {
+  return Array.from({length: 12}, (_, i) => {
+    const base = emptyRow(jahr, i + 1);
+    const ov = overrides.find(o => o.monat === i + 1);
+    return ov ? {...base, ...ov} : base;
+  });
+}
+
+const SEED_VERBRAUCH = [
+  ...buildYear(2022, [
+    {monat:1,  strom_durchschnitt:323.8, gas_durchschnitt:47.4},
+    {monat:7,  gas_anfang:12800, gas_ende:12810, gas_verbrauch:10},
+    {monat:8,  strom_anfang:36907, strom_ende:37249, strom_verbrauch:342, gas_anfang:12810, gas_ende:12810, gas_verbrauch:0},
+    {monat:9,  strom_anfang:37249, strom_ende:37574, strom_verbrauch:325, gas_anfang:12810, gas_ende:12828, gas_verbrauch:18},
+    {monat:10, strom_anfang:37574, strom_ende:37898, strom_verbrauch:324, gas_anfang:12828, gas_ende:12875, gas_verbrauch:47},
+    {monat:11, strom_anfang:37898, strom_ende:38250, strom_verbrauch:352, gas_anfang:12875, gas_ende:13037, gas_verbrauch:162},
+    {monat:12, strom_anfang:38250, strom_ende:38526, strom_verbrauch:276, gas_anfang:13037, gas_ende:13205, gas_verbrauch:168},
+  ]),
+  ...buildYear(2023, [
+    {monat:1,  strom_anfang:38526, strom_ende:38880, strom_verbrauch:354, strom_durchschnitt:287, strom_eingespeist:0,  gas_anfang:13205, gas_ende:13431, gas_verbrauch:226, gas_durchschnitt:90.25},
+    {monat:2,  strom_anfang:38880, strom_ende:39190, strom_verbrauch:310, gas_anfang:13431, gas_ende:13568, gas_verbrauch:137},
+    {monat:3,  strom_anfang:0,     strom_ende:200,   strom_verbrauch:200, strom_eingespeist:3,  gas_anfang:13568, gas_ende:13712, gas_verbrauch:144},
+    {monat:4,  strom_anfang:200,   strom_ende:504,   strom_verbrauch:304, strom_eingespeist:12, gas_anfang:13712, gas_ende:13806, gas_verbrauch:94},
+    {monat:5,  strom_anfang:504,   strom_ende:768,   strom_verbrauch:264, strom_eingespeist:33, gas_anfang:13806, gas_ende:13821, gas_verbrauch:15},
+    {monat:6,  strom_anfang:768,   strom_ende:1037,  strom_verbrauch:269, strom_eingespeist:55, gas_anfang:13821, gas_ende:13822, gas_verbrauch:1},
+    {monat:7,  strom_anfang:1037,  strom_ende:1265,  strom_verbrauch:228, strom_eingespeist:69, gas_anfang:13822, gas_ende:13824, gas_verbrauch:2},
+    {monat:8,  strom_anfang:1265,  strom_ende:1510,  strom_verbrauch:245, strom_eingespeist:83, gas_anfang:13824, gas_ende:13829, gas_verbrauch:5},
+    {monat:9,  strom_anfang:1510,  strom_ende:1755,  strom_verbrauch:245, strom_eingespeist:86, gas_anfang:13829, gas_ende:13837, gas_verbrauch:8},
+    {monat:10, strom_anfang:1755,  strom_ende:2085,  strom_verbrauch:330, strom_eingespeist:87, gas_anfang:13837, gas_ende:13922, gas_verbrauch:85},
+    {monat:11, strom_anfang:2085,  strom_ende:2407,  strom_verbrauch:322, strom_eingespeist:87, gas_anfang:13922, gas_ende:14096, gas_verbrauch:174},
+    {monat:12, strom_anfang:2407,  strom_ende:2780,  strom_verbrauch:373, strom_eingespeist:87, gas_anfang:14096, gas_ende:14288, gas_verbrauch:192},
+  ]),
+  ...buildYear(2024, [
+    {monat:1,  strom_anfang:2780,  strom_ende:3161,  strom_verbrauch:381, strom_durchschnitt:153.42, strom_eingespeist:87,   gas_anfang:14288, gas_ende:14536, gas_verbrauch:248, gas_durchschnitt:100.75},
+    {monat:2,  strom_anfang:3161,  strom_ende:3465,  strom_verbrauch:304, strom_eingespeist:88,   gas_anfang:14536, gas_ende:14710, gas_verbrauch:174},
+    {monat:3,  strom_anfang:3520,  strom_ende:3763,  strom_verbrauch:243, strom_eingespeist:90,   gas_anfang:14710, gas_ende:14816, gas_verbrauch:106},
+    {monat:4,  strom_anfang:3763,  strom_ende:3939,  strom_verbrauch:176, strom_eingespeist:98,   gas_anfang:14816, gas_ende:14905, gas_verbrauch:89},
+    {monat:5,  strom_anfang:3939,  strom_ende:3973,  strom_verbrauch:34,  strom_eingespeist:111,  gas_anfang:14905, gas_ende:14946, gas_verbrauch:41},
+    {monat:6,  strom_anfang:3973,  strom_ende:4001,  strom_verbrauch:28,  strom_eingespeist:357,  gas_anfang:14946, gas_ende:14979, gas_verbrauch:33},
+    {monat:7,  strom_anfang:4001,  strom_ende:4023,  strom_verbrauch:22,  strom_eingespeist:1026, gas_anfang:14979, gas_ende:15006, gas_verbrauch:27},
+    {monat:8,  strom_anfang:4023,  strom_ende:4046,  strom_verbrauch:23,  strom_eingespeist:1658, gas_anfang:15006, gas_ende:15030, gas_verbrauch:24},
+    {monat:9,  strom_anfang:4046,  strom_ende:4089,  strom_verbrauch:43,  strom_eingespeist:1925, gas_anfang:15030, gas_ende:15071, gas_verbrauch:41},
+    {monat:10, strom_anfang:4089,  strom_ende:4161,  strom_verbrauch:72,  strom_eingespeist:2001, gas_anfang:15071, gas_ende:15146, gas_verbrauch:75},
+    {monat:11, strom_anfang:4161,  strom_ende:4414,  strom_verbrauch:253, strom_eingespeist:2006, gas_anfang:15146, gas_ende:15300, gas_verbrauch:154},
+    {monat:12, strom_anfang:4414,  strom_ende:4676,  strom_verbrauch:262, strom_eingespeist:2007, gas_anfang:15300, gas_ende:15497, gas_verbrauch:197},
+  ]),
+  ...buildYear(2025, [
+    {monat:1,  strom_anfang:4676,  strom_ende:4937,  strom_verbrauch:261, strom_durchschnitt:68.375, strom_eingespeist:8,   gas_anfang:15497, gas_ende:15720, gas_verbrauch:223},
+    {monat:2,  strom_anfang:4937,  strom_ende:5074,  strom_verbrauch:137, strom_eingespeist:60,  gas_anfang:15720, gas_ende:15917, gas_verbrauch:197},
+    {monat:3,  strom_anfang:5074,  strom_ende:5110,  strom_verbrauch:36,  strom_eingespeist:303, gas_anfang:15917, gas_ende:16079, gas_verbrauch:162},
+    {monat:4,  strom_anfang:5110,  strom_ende:5146,  strom_verbrauch:36,  strom_eingespeist:502, gas_anfang:16079, gas_ende:16122, gas_verbrauch:43},
+    {monat:5,  strom_anfang:5146,  strom_ende:5170,  strom_verbrauch:24,  strom_eingespeist:871, gas_anfang:16122, gas_ende:16183, gas_verbrauch:61},
+    {monat:6,  strom_anfang:5170,  strom_ende:5180,  strom_verbrauch:10,  strom_eingespeist:749, gas_anfang:16183, gas_ende:16200, gas_verbrauch:17},
+    {monat:7,  strom_anfang:5180,  strom_ende:5200,  strom_verbrauch:20,  strom_eingespeist:478, gas_anfang:16200, gas_ende:16220, gas_verbrauch:20},
+    {monat:8,  strom_anfang:5200,  strom_ende:5223,  strom_verbrauch:23,  strom_eingespeist:186, gas_anfang:16220, gas_ende:16247, gas_verbrauch:27},
+    {monat:9,  strom_anfang:5223,  strom_ende:5281,  strom_verbrauch:58,  strom_eingespeist:618, gas_anfang:16247, gas_ende:16295, gas_verbrauch:48},
+    {monat:10, strom_anfang:5281,  strom_ende:5439,  strom_verbrauch:158, strom_eingespeist:118, gas_anfang:16295, gas_ende:16400, gas_verbrauch:105},
+    {monat:11, strom_anfang:5439,  strom_ende:5631,  strom_verbrauch:192, strom_eingespeist:8,   gas_anfang:16400, gas_ende:16557, gas_verbrauch:157},
+    {monat:12, strom_anfang:5631,  strom_ende:5927,  strom_verbrauch:296, strom_eingespeist:2,   gas_anfang:16557, gas_ende:16747, gas_verbrauch:190},
+  ]),
+  ...buildYear(2026, [
+    {monat:1,  strom_anfang:5927,  strom_ende:6269,  strom_verbrauch:342, strom_eingespeist:4,   gas_anfang:16747, gas_ende:16957, gas_verbrauch:210},
+    {monat:2,  strom_anfang:6269,  strom_ende:6479,  strom_verbrauch:210, strom_eingespeist:19,  gas_anfang:16957, gas_ende:17116, gas_verbrauch:159},
+    {monat:3,  strom_anfang:6479,  strom_ende:6545,  strom_verbrauch:66,  strom_eingespeist:300, gas_anfang:17116, gas_ende:17286, gas_verbrauch:170},
+  ]),
+];
+
+const SEED_EINSPEISUNG = [
+  {jahr:2024, monat:6,  zaehler_anfang:123,  zaehler_ende:357,  verguetung:18.95},
+  {jahr:2024, monat:7,  zaehler_anfang:357,  zaehler_ende:1026, verguetung:54.19},
+  {jahr:2024, monat:8,  zaehler_anfang:1026, zaehler_ende:1658, verguetung:51.19},
+  {jahr:2024, monat:9,  zaehler_anfang:1658, zaehler_ende:1925, verguetung:21.63},
+  {jahr:2024, monat:10, zaehler_anfang:1925, zaehler_ende:2001, verguetung:6.16},
+  {jahr:2024, monat:11, zaehler_anfang:2001, zaehler_ende:2006, verguetung:0.41},
+  {jahr:2024, monat:12, zaehler_anfang:2006, zaehler_ende:2007, verguetung:0.08},
+  {jahr:2025, monat:1,  zaehler_anfang:2007, zaehler_ende:2015, verguetung:0.65},
+  {jahr:2025, monat:2,  zaehler_anfang:2015, zaehler_ende:2075, verguetung:4.86},
+  {jahr:2025, monat:3,  zaehler_anfang:2075, zaehler_ende:2378, verguetung:24.54},
+  {jahr:2025, monat:4,  zaehler_anfang:2378, zaehler_ende:2880, verguetung:40.66},
+  {jahr:2025, monat:5,  zaehler_anfang:2880, zaehler_ende:3751, verguetung:70.55},
+  {jahr:2025, monat:6,  zaehler_anfang:3751, zaehler_ende:4500, verguetung:60.67},
+  {jahr:2025, monat:7,  zaehler_anfang:4500, zaehler_ende:4978, verguetung:38.72},
+  {jahr:2025, monat:8,  zaehler_anfang:4978, zaehler_ende:5164, verguetung:15.07},
+  {jahr:2025, monat:9,  zaehler_anfang:5164, zaehler_ende:5782, verguetung:50.06},
+  {jahr:2025, monat:10, zaehler_anfang:5782, zaehler_ende:5900, verguetung:9.56},
+  {jahr:2025, monat:11, zaehler_anfang:5900, zaehler_ende:5908, verguetung:0.65},
+  {jahr:2025, monat:12, zaehler_anfang:5908, zaehler_ende:5910, verguetung:0.16},
+  {jahr:2026, monat:1,  zaehler_anfang:5910, zaehler_ende:5914, verguetung:0.32},
+  {jahr:2026, monat:2,  zaehler_anfang:5914, zaehler_ende:5933, verguetung:1.54},
+  {jahr:2026, monat:3,  zaehler_anfang:5933, zaehler_ende:6233, verguetung:24.30},
+];
+
+// ══════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════
+let sb = null;      // supabase client
+let activeYear = null;
+
+// verbrauch[year][month 1-12] = row object
+// einsp[year][month 1-12] = row object
+let verbrauch = {};
+let einsp = {};
+
+function initFromSeed() {
+  verbrauch = {};
+  einsp = {};
+  SEED_VERBRAUCH.forEach(r => {
+    if (!verbrauch[r.jahr]) verbrauch[r.jahr] = {};
+    verbrauch[r.jahr][r.monat] = {...r};
+  });
+  SEED_EINSPEISUNG.forEach(r => {
+    if (!einsp[r.jahr]) einsp[r.jahr] = {};
+    einsp[r.jahr][r.monat] = {...r};
+  });
+}
+
+function getYears() {
+  const ys = new Set([...Object.keys(verbrauch), ...Object.keys(einsp)].map(Number));
+  return [...ys].sort((a,b) => a - b);
+}
+
+// ══════════════════════════════════════════════════════
+//  SUPABASE
+// ══════════════════════════════════════════════════════
+function initSupabase() {
+  const url = localStorage.getItem('sb_url');
+  const key = localStorage.getItem('sb_key');
+  if (url && key) {
+    sb = window.supabase.createClient(url, key);
+    setConnStatus('loading', 'Verbinde…');
+    return true;
+  }
+  return false;
+}
+
+async function loadFromSupabase() {
+  if (!sb) return false;
+  try {
+    const [{ data: vData, error: vErr }, { data: eData, error: eErr }] = await Promise.all([
+      sb.from('verbrauch_monat').select('*'),
+      sb.from('einspeisung_solar').select('*'),
+    ]);
+    if (vErr) throw vErr;
+    if (eErr) throw eErr;
+
+    if (vData && vData.length > 0) {
+      verbrauch = {};
+      vData.forEach(r => {
+        if (!verbrauch[r.jahr]) verbrauch[r.jahr] = {};
+        verbrauch[r.jahr][r.monat] = r;
+      });
+    }
+    if (eData && eData.length > 0) {
+      einsp = {};
+      eData.forEach(r => {
+        if (!einsp[r.jahr]) einsp[r.jahr] = {};
+        einsp[r.jahr][r.monat] = r;
+      });
+    }
+
+    setConnStatus('online', 'Supabase verbunden');
+    return true;
+  } catch(e) {
+    console.error(e);
+    setConnStatus('error', 'Verbindungsfehler');
+    toast('Fehler beim Laden: ' + e.message, 'err');
+    return false;
+  }
+}
+
+async function upsertVerbrauch(row) {
+  if (!sb) return;
+  const { error } = await sb.from('verbrauch_monat').upsert(
+    {
+      jahr: row.jahr, monat: row.monat,
+      strom_anfang: row.strom_anfang, strom_ende: row.strom_ende,
+      strom_verbrauch: row.strom_verbrauch, strom_durchschnitt: row.strom_durchschnitt,
+      strom_eingespeist: row.strom_eingespeist,
+      gas_anfang: row.gas_anfang, gas_ende: row.gas_ende,
+      gas_verbrauch: row.gas_verbrauch, gas_durchschnitt: row.gas_durchschnitt,
+    },
+    { onConflict: 'jahr,monat' }
+  );
+  if (error) toast('Speicherfehler: ' + error.message, 'err');
+  else toast('Gespeichert ✓', 'ok');
+}
+
+async function upsertEinsp(row) {
+  if (!sb) return;
+  const { error } = await sb.from('einspeisung_solar').upsert(
+    {
+      jahr: row.jahr, monat: row.monat,
+      zaehler_anfang: row.zaehler_anfang, zaehler_ende: row.zaehler_ende,
+      verguetung: row.verguetung,
+    },
+    { onConflict: 'jahr,monat' }
+  );
+  if (error) toast('Speicherfehler: ' + error.message, 'err');
+  else toast('Gespeichert ✓', 'ok');
+}
+
+async function seedToSupabase() {
+  if (!sb) return;
+  toast('Initialdaten werden hochgeladen…', 'ok');
+  const vRows = SEED_VERBRAUCH.map(r => ({
+    jahr:r.jahr, monat:r.monat,
+    strom_anfang:r.strom_anfang, strom_ende:r.strom_ende,
+    strom_verbrauch:r.strom_verbrauch, strom_durchschnitt:r.strom_durchschnitt,
+    strom_eingespeist:r.strom_eingespeist,
+    gas_anfang:r.gas_anfang, gas_ende:r.gas_ende,
+    gas_verbrauch:r.gas_verbrauch, gas_durchschnitt:r.gas_durchschnitt,
+  }));
+  const eRows = SEED_EINSPEISUNG.map(r => ({
+    jahr:r.jahr, monat:r.monat,
+    zaehler_anfang:r.zaehler_anfang, zaehler_ende:r.zaehler_ende,
+    verguetung:r.verguetung,
+  }));
+  const [r1, r2] = await Promise.all([
+    sb.from('verbrauch_monat').upsert(vRows, { onConflict: 'jahr,monat' }),
+    sb.from('einspeisung_solar').upsert(eRows, { onConflict: 'jahr,monat' }),
+  ]);
+  if (r1.error || r2.error) {
+    toast('Upload-Fehler: ' + (r1.error || r2.error).message, 'err');
+  } else {
+    toast('Alle Daten hochgeladen ✓', 'ok');
+  }
+}
+
+async function syncAll() {
+  if (!sb) { toast('Keine Supabase-Verbindung', 'err'); return; }
+  setConnStatus('loading', 'Synchronisiere…');
+  const ok = await loadFromSupabase();
+  if (ok) { render(); toast('Sync abgeschlossen ✓', 'ok'); }
+}
+
+// ══════════════════════════════════════════════════════
+//  SETTINGS
+// ══════════════════════════════════════════════════════
+function openSettings() {
+  document.getElementById('sbUrl').value = localStorage.getItem('sb_url') || '';
+  document.getElementById('sbKey').value = localStorage.getItem('sb_key') || '';
+  document.getElementById('settingsOverlay').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+}
+
+async function saveSettings() {
+  const url = document.getElementById('sbUrl').value.trim();
+  const key = document.getElementById('sbKey').value.trim();
+  if (!url || !key) { toast('Bitte URL und Key eingeben', 'err'); return; }
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  sb = window.supabase.createClient(url, key);
+  setConnStatus('loading', 'Verbinde…');
+  closeSettings();
+
+  // Check if tables are empty → seed
+  try {
+    const { data, error } = await sb.from('verbrauch_monat').select('id').limit(1);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      await seedToSupabase();
+    } else {
+      toast('Verbunden – Lade Daten…', 'ok');
+    }
+    await loadFromSupabase();
+    render();
+  } catch(e) {
+    setConnStatus('error', 'Fehler');
+    toast('Verbindung fehlgeschlagen: ' + e.message, 'err');
+  }
+}
+
+function clearSettings() {
+  localStorage.removeItem('sb_url');
+  localStorage.removeItem('sb_key');
+  sb = null;
+  setConnStatus('', 'Nicht verbunden');
+  closeSettings();
+  toast('Verbindung getrennt', 'ok');
+}
+
+// ══════════════════════════════════════════════════════
+//  YEAR MANAGEMENT
+// ══════════════════════════════════════════════════════
+function addYear() {
+  const years = getYears();
+  const next = years.length > 0 ? Math.max(...years) + 1 : new Date().getFullYear();
+  const input = prompt('Neues Jahr anlegen:', next);
+  const y = parseInt(input);
+  if (!y || isNaN(y) || y < 1990 || y > 2100) { toast('Ungültige Jahreszahl', 'err'); return; }
+  if (verbrauch[y]) { toast('Jahr ' + y + ' existiert bereits', 'err'); return; }
+  verbrauch[y] = {};
+  for (let m = 1; m <= 12; m++) verbrauch[y][m] = emptyRow(y, m);
+  activeYear = y;
+  render();
+  toast('Jahr ' + y + ' angelegt', 'ok');
+}
+
+// ══════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════
+function fmt(v, dec = 0) {
+  if (v === null || v === undefined || v === '') return '<span class="null-val">–</span>';
+  const n = parseFloat(v);
+  if (isNaN(n)) return '<span class="null-val">–</span>';
+  return dec > 0 ? n.toFixed(dec) : n.toLocaleString('de-DE');
+}
+
+function fmtRaw(v) {
+  if (v === null || v === undefined || v === '') return '';
+  return parseFloat(v);
+}
+
+function sumField(data, field) {
+  return data.reduce((s, r) => {
+    const v = r && r[field];
+    return s + (v != null && !isNaN(v) ? parseFloat(v) : 0);
+  }, 0);
+}
+
+function getVerbrauchClass(cur, prev) {
+  if (cur === null || cur === undefined) return 'v-none';
+  if (prev === null || prev === undefined) return '';
+  const c = parseFloat(cur), p = parseFloat(prev);
+  if (isNaN(c) || isNaN(p)) return '';
+  if (c < p) return 'v-lower';
+  if (c > p) return 'v-higher';
+  return 'v-same';
+}
+
+function setConnStatus(state, text) {
+  const dot = document.getElementById('connDot');
+  const txt = document.getElementById('connText');
+  dot.className = 'conn-dot' + (state === 'online' ? ' online' : state === 'error' ? ' error' : '');
+  txt.textContent = text;
+}
+
+let toastTimer;
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 2800);
+}
+
+// ══════════════════════════════════════════════════════
+//  INLINE EDITING
+// ══════════════════════════════════════════════════════
+function makeEditable(td, currentVal, onSave) {
+  td.innerHTML = `<input type="number" step="any" value="${fmtRaw(currentVal)}" autofocus>`;
+  const inp = td.querySelector('input');
+  inp.focus();
+  inp.select();
+
+  function commit() {
+    const raw = inp.value.trim();
+    const val = raw === '' ? null : parseFloat(raw);
+    onSave(isNaN(val) ? null : val);
+  }
+
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') inp.blur();
+    if (e.key === 'Escape') { inp.removeEventListener('blur', commit); render(); }
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════════
+function render() {
+  renderTabs();
+  renderSummary();
+  renderContent();
+}
+
+function renderTabs() {
+  const bar = document.getElementById('tabsBar');
+  const years = getYears();
+  if (!activeYear || !years.includes(activeYear)) activeYear = years[years.length - 1];
+
+  // Keep add button
+  bar.innerHTML = '';
+  years.forEach(y => {
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (y === activeYear ? ' active' : '');
+    btn.textContent = y;
+    btn.onclick = () => { activeYear = y; render(); };
+    bar.appendChild(btn);
+  });
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn btn-ghost tab-add';
+  addBtn.textContent = '＋ Jahr';
+  addBtn.onclick = addYear;
+  bar.appendChild(addBtn);
+}
+
+function renderSummary() {
+  const y = activeYear;
+  const py = y - 1;
+  const months = Object.values(verbrauch[y] || {});
+  const prevMonths = Object.values(verbrauch[py] || {});
+
+  const sSum = sumField(months, 'strom_verbrauch');
+  const gSum = sumField(months, 'gas_verbrauch');
+  const sPrev = sumField(prevMonths, 'strom_verbrauch');
+  const gPrev = sumField(prevMonths, 'gas_verbrauch');
+
+  // Solar vergütung sum
+  const eMonths = Object.values(einsp[y] || {});
+  const vgSum = eMonths.reduce((s, r) => s + (r.verguetung || 0), 0);
+
+  const sDelta = sPrev > 0 ? sSum - sPrev : null;
+  const gDelta = gPrev > 0 ? gSum - gPrev : null;
+
+  function deltaHtml(d, label) {
+    if (d === null) return `<div class="card-delta neutral">Kein Vorjahr</div>`;
+    const sign = d > 0 ? '+' : '';
+    const cls = d > 0 ? 'pos' : d < 0 ? 'neg' : 'neutral';
+    const arrow = d > 0 ? '▲' : d < 0 ? '▼' : '=';
+    return `<div class="card-delta ${cls}">${arrow} ${sign}${d.toLocaleString('de-DE')} ${label} ggü. ${py}</div>`;
+  }
+
+  document.getElementById('summaryRow').innerHTML = `
+    <div class="card strom">
+      <div class="card-label">⚡ Strom Jahresverbrauch</div>
+      <div class="card-value">${sSum.toLocaleString('de-DE')}<span class="card-unit">kWh</span></div>
+      ${deltaHtml(sDelta, 'kWh')}
+    </div>
+    <div class="card gas">
+      <div class="card-label">🔥 Gas Jahresverbrauch</div>
+      <div class="card-value">${gSum.toLocaleString('de-DE')}<span class="card-unit">kWh</span></div>
+      ${deltaHtml(gDelta, 'kWh')}
+    </div>
+    ${vgSum > 0 ? `
+    <div class="card solar">
+      <div class="card-label">☀ Einspeisevergütung</div>
+      <div class="card-value">${vgSum.toFixed(2)}<span class="card-unit">€</span></div>
+      <div class="card-delta neutral">Jahr ${y}</div>
+    </div>` : ''}
+  `;
+}
+
+function renderContent() {
+  const y = activeYear;
+  const py = y - 1;
+  const months = verbrauch[y] || {};
+  const prevMonths = verbrauch[py] || {};
+  const eMonths = einsp[y] || {};
+
+  let html = `<div class="year-badge">${y}</div>`;
+
+  // ─── STROM ───
+  const sTotal = sumField(Object.values(months), 'strom_verbrauch');
+  html += `
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">
+        <div class="icon strom-icon">⚡</div> Strom – Zählerstand & Verbrauch
+      </div>
+      <div class="section-meta">Gesamt: ${sTotal.toLocaleString('de-DE')} kWh</div>
+    </div>
+    <div class="scroll-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Monat</th>
+          <th>Anfangsstand</th>
+          <th>Endstand</th>
+          <th>Verbrauch (kWh)</th>
+          <th>Ø Täglich</th>
+          <th>Eingespeist</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  for (let m = 1; m <= 12; m++) {
+    const r = months[m] || emptyRow(y, m);
+    const pr = prevMonths[m];
+    const vc = getVerbrauchClass(r.strom_verbrauch, pr ? pr.strom_verbrauch : null);
+
+    html += `<tr>
+      <td class="month-name">${MONATE[m-1]}</td>
+      <td class="edit" onclick="editCell(this, ${y}, ${m}, 'strom_anfang', 'v')">${fmt(r.strom_anfang)}</td>
+      <td class="edit" onclick="editCell(this, ${y}, ${m}, 'strom_ende', 'v')">${fmt(r.strom_ende)}</td>
+      <td class="edit ${vc}" onclick="editCell(this, ${y}, ${m}, 'strom_verbrauch', 'v')">${fmt(r.strom_verbrauch)}</td>
+      <td class="edit" onclick="editCell(this, ${y}, ${m}, 'strom_durchschnitt', 'v')">${fmt(r.strom_durchschnitt, 2)}</td>
+      <td class="edit" onclick="editCell(this, ${y}, ${m}, 'strom_eingespeist', 'v')">${fmt(r.strom_eingespeist)}</td>
+    </tr>`;
+  }
+
+  html += `<tr class="total-row">
+    <td>SUMME</td>
+    <td></td><td></td>
+    <td>${sTotal.toLocaleString('de-DE')} kWh</td>
+    <td></td><td></td>
+  </tr>`;
+  html += `</tbody></table></div></div>`;
+
+  // ─── GAS ───
+  const gTotal = sumField(Object.values(months), 'gas_verbrauch');
+  html += `
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">
+        <div class="icon gas-icon">🔥</div> Gas – Zählerstand & Verbrauch
+      </div>
+      <div class="section-meta">Gesamt: ${gTotal.toLocaleString('de-DE')} kWh</div>
+    </div>
+    <div class="scroll-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Monat</th>
+          <th>Anfangsstand</th>
+          <th>Endstand</th>
+          <th>Verbrauch (kWh)</th>
+          <th>Ø Täglich</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  for (let m = 1; m <= 12; m++) {
+    const r = months[m] || emptyRow(y, m);
+    const pr = prevMonths[m];
+    const vc = getVerbrauchClass(r.gas_verbrauch, pr ? pr.gas_verbrauch : null);
+
+    html += `<tr>
+      <td class="month-name">${MONATE[m-1]}</td>
+      <td class="edit" onclick="editCell(this, ${y}, ${m}, 'gas_anfang', 'v')">${fmt(r.gas_anfang)}</td>
+      <td class="edit" onclick="editCell(this, ${y}, ${m}, 'gas_ende', 'v')">${fmt(r.gas_ende)}</td>
+      <td class="edit ${vc}" onclick="editCell(this, ${y}, ${m}, 'gas_verbrauch', 'v')">${fmt(r.gas_verbrauch)}</td>
+      <td class="edit" onclick="editCell(this, ${y}, ${m}, 'gas_durchschnitt', 'v')">${fmt(r.gas_durchschnitt, 2)}</td>
+    </tr>`;
+  }
+
+  html += `<tr class="total-row">
+    <td>SUMME</td>
+    <td></td><td></td>
+    <td>${gTotal.toLocaleString('de-DE')} kWh</td>
+    <td></td>
+  </tr>`;
+  html += `</tbody></table></div></div>`;
+
+  // ─── SOLAR EINSPEISUNG ───
+  const hasEinsp = Object.keys(eMonths).length > 0;
+  const showEinsp = hasEinsp || y >= 2024;
+
+  if (showEinsp) {
+    const vgTotal = Object.values(eMonths).reduce((s, r) => s + (r.verguetung || 0), 0);
+    const kwhTotal = Object.values(eMonths).reduce((s, r) => {
+      const a = r.zaehler_anfang, e = r.zaehler_ende;
+      return s + (a != null && e != null ? Math.max(0, e - a) : 0);
+    }, 0);
+
+    html += `
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title">
+          <div class="icon solar-icon">☀</div> Solar – Einspeisezähler & Vergütung
+        </div>
+        <div class="section-meta">Vergütung gesamt: ${vgTotal.toFixed(2)} € · ${kwhTotal.toLocaleString('de-DE')} kWh eingespeist</div>
+      </div>
+      <div class="scroll-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Monat</th>
+            <th>Zähler Anfang</th>
+            <th>Zähler Ende</th>
+            <th>Eingespeist (kWh)</th>
+            <th>Vergütung (€)</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+    for (let m = 1; m <= 12; m++) {
+      const r = eMonths[m] || { jahr: y, monat: m, zaehler_anfang: null, zaehler_ende: null, verguetung: null };
+      const kwhM = r.zaehler_anfang != null && r.zaehler_ende != null
+        ? Math.max(0, r.zaehler_ende - r.zaehler_anfang) : null;
+
+      html += `<tr>
+        <td class="month-name">${MONATE[m-1]}</td>
+        <td class="edit" onclick="editCellE(this, ${y}, ${m}, 'zaehler_anfang')">${fmt(r.zaehler_anfang)}</td>
+        <td class="edit" onclick="editCellE(this, ${y}, ${m}, 'zaehler_ende')">${fmt(r.zaehler_ende)}</td>
+        <td>${fmt(kwhM)}</td>
+        <td class="edit" onclick="editCellE(this, ${y}, ${m}, 'verguetung')">${fmt(r.verguetung, 2)}</td>
+      </tr>`;
+    }
+
+    html += `<tr class="total-row">
+      <td>SUMME</td>
+      <td></td><td></td>
+      <td>${kwhTotal.toLocaleString('de-DE')} kWh</td>
+      <td>${vgTotal.toFixed(2)} €</td>
+    </tr>`;
+    html += `</tbody></table></div></div>`;
+  }
+
+  document.getElementById('contentArea').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════
+//  EDIT HANDLERS
+// ══════════════════════════════════════════════════════
+function editCell(td, jahr, monat, field, table) {
+  if (!verbrauch[jahr]) verbrauch[jahr] = {};
+  if (!verbrauch[jahr][monat]) verbrauch[jahr][monat] = emptyRow(jahr, monat);
+  const row = verbrauch[jahr][monat];
+
+  makeEditable(td, row[field], async (val) => {
+    row[field] = val;
+    // Auto-calc verbrauch
+    if (field === 'strom_anfang' || field === 'strom_ende') {
+      if (row.strom_anfang != null && row.strom_ende != null)
+        row.strom_verbrauch = row.strom_ende - row.strom_anfang;
+    }
+    if (field === 'gas_anfang' || field === 'gas_ende') {
+      if (row.gas_anfang != null && row.gas_ende != null)
+        row.gas_verbrauch = row.gas_ende - row.gas_anfang;
+    }
+    await upsertVerbrauch(row);
+    render();
+  });
+}
+
+function editCellE(td, jahr, monat, field) {
+  if (!einsp[jahr]) einsp[jahr] = {};
+  if (!einsp[jahr][monat]) einsp[jahr][monat] = { jahr, monat, zaehler_anfang: null, zaehler_ende: null, verguetung: null };
+  const row = einsp[jahr][monat];
+
+  makeEditable(td, row[field], async (val) => {
+    row[field] = val;
+    await upsertEinsp(row);
+    render();
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+async function init() {
+  initFromSeed();
+  activeYear = Math.max(...getYears());
+
+  const connected = initSupabase();
+  if (connected) {
+    const ok = await loadFromSupabase();
+    if (!ok) {
+      setConnStatus('error', 'Ladefehler – lokale Daten');
+    }
+  } else {
+    setConnStatus('', 'Nicht verbunden');
+  }
+
+  render();
+}
+
+// Close modal on overlay click
+document.getElementById('settingsOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeSettings();
+});
+
+init();
+</script>
+</body>
+</html>
