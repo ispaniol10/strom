@@ -1236,14 +1236,23 @@ function renderContent() {
 // ══════════════════════════════════════════════════════
 //  EDIT HANDLERS
 // ══════════════════════════════════════════════════════
-function editCellE(td, jahr, monat, field) {
-  if (!einsp[jahr]) einsp[jahr] = {};
-  if (!einsp[jahr][monat]) einsp[jahr][monat] = { jahr, monat, zaehler_anfang: null, zaehler_ende: null, verguetung: null };
-  const row = einsp[jahr][monat];
+function editCell(td, jahr, monat, field, table) {
+  if (!verbrauch[jahr]) verbrauch[jahr] = {};
+  if (!verbrauch[jahr][monat]) verbrauch[jahr][monat] = emptyRow(jahr, monat);
+  const row = verbrauch[jahr][monat];
 
   makeEditable(td, row[field], async (val) => {
     row[field] = val;
-    await upsertEinsp(row);
+    // Auto-calc verbrauch
+    if (field === 'strom_anfang' || field === 'strom_ende') {
+      if (row.strom_anfang != null && row.strom_ende != null)
+        row.strom_verbrauch = row.strom_ende - row.strom_anfang;
+    }
+    if (field === 'gas_anfang' || field === 'gas_ende') {
+      if (row.gas_anfang != null && row.gas_ende != null)
+        row.gas_verbrauch = row.gas_ende - row.gas_anfang;
+    }
+    await upsertVerbrauch(row);
     render();
   });
 }
@@ -1284,8 +1293,6 @@ async function init() {
 
   render();
 }
-
-
 init();
 </script>
 </body>
